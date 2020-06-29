@@ -3,8 +3,7 @@ import hashlib
 from Crypto.Cipher import AES
 from Crypto import Random
 import os
-
-
+import json
 
 
 class Encryption:
@@ -23,8 +22,8 @@ class Encryption:
         return s.rstrip()
 
     
-    def encrypt( self , plain_text, password , type = 'JSON'):
-    # generate a random salt
+    def encrypt( self , message, password , type = 'json'):
+        # generate a random salt
         salt = os.urandom(AES.block_size)
 
         # generate a random iv
@@ -33,24 +32,31 @@ class Encryption:
         # use the Scrypt KDF to get a private key from the password
         private_key = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
 
-        # pad text with spaces to be valid for AES CBC mode
-        padded_text = self.pad(plain_text)
-        
-        # create cipher config
-        cipher_config = AES.new(private_key, AES.MODE_CBC, iv)
+        if type == 'json':
+            json_string = json.dumps(message)
+            padded_message = self.pad(json_string)
+            cipher_config = AES.new(private_key, AES.MODE_CBC, iv)
+
+        else:
+            # pad text with spaces to be valid for AES CBC mode
+            padded_message = self.pad(message)
+            
+            # create cipher config
+            cipher_config = AES.new(private_key, AES.MODE_CBC, iv)
 
         # return a dictionary with the encrypted text
         return {
-            'cipher_text': base64.b64encode(cipher_config.encrypt(padded_text)),
+            'cipher_text': base64.b64encode(cipher_config.encrypt(padded_message)),
             'salt': base64.b64encode(salt),
             'iv': base64.b64encode(iv)
         }
 
-    def decrypt(self , enc_dict, password , Type = 'JSON'):
+    def decrypt(self , enc_dict, password , type):
         # decode the dictionary entries from base64
         salt = base64.b64decode(enc_dict['salt'])
         enc = base64.b64decode(enc_dict['cipher_text'])
         iv = base64.b64decode(enc_dict['iv'])
+
 
         # generate the private key from the password and salt
         private_key = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
@@ -58,23 +64,42 @@ class Encryption:
         # create the cipher config
         cipher = AES.new(private_key, AES.MODE_CBC, iv)
 
+
         # decrypt the cipher text
         decrypted = cipher.decrypt(enc)
 
         # unpad the text to remove the added spaces
-        original = self.unpad(decrypted)
 
-        return original
+        if type == 'json':
+            string_json = self.unpad(decrypted)
+            decoded_json_string = string_json.decode("utf-8")
+            original_json = json.loads(decoded_json_string)
+            return original_json
+
+        else:
+            original_message = self.unpad(decrypted)
+            return original_message
 
 
 
 
 message = Encryption(block_size = 16)
 
-enc_dict = message.encrypt('hello world', '1234')
+dic_message = {
+    'name' : 'Afsan',
+    'surname' : 'khan',
+    'gender' : 'male',
+}
+
+string_message = 'hello world'
+
+key = 'devil'
+
+
+enc_dict = message.encrypt(string_message, key , 'string')
 print(enc_dict)
 
-decrypted_message = message.decrypt(enc_dict , '1234')
+decrypted_message = message.decrypt(enc_dict , key , 'string')
 print(decrypted_message)
 
 
