@@ -48,7 +48,10 @@ class Encryption:
         return {
             'cipher_text': base64.b64encode(cipher_config.encrypt(padded_message)),
             'salt': base64.b64encode(salt),
-            'iv': base64.b64encode(iv)
+            'iv': base64.b64encode(iv),
+            'raw_salt' : salt,
+            'raw_cipher' : cipher_config.encrypt(padded_message),
+            'raw_iv' : iv
         }
 
     def decrypt(self , enc_dict, password , type):
@@ -81,8 +84,6 @@ class Encryption:
             return original_message
 
 
-
-
 message = Encryption(block_size = 16)
 
 dic_message = {
@@ -95,12 +96,6 @@ string_message = 'hello world'
 
 key = 'devil'
 
-
-enc_dict = message.encrypt(string_message, key , 'string')
-print(enc_dict)
-
-decrypted_message = message.decrypt(enc_dict , key , 'string')
-print(decrypted_message)
 
 
 
